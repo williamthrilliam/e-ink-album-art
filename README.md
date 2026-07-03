@@ -46,6 +46,8 @@ e-ink-album-art/
 └── spotify-album-art.service # Systemd service file
 ```
 
+*Note: All required hardware drivers for the 13.3" Waveshare Spectra 6 (E6) display (along with precompiled 32-bit/64-bit C helper library files) are fully pre-packaged and included inside the `lib/` directory. You do not need to download or compile any external display drivers.*
+
 ---
 
 ## Setup Instructions
