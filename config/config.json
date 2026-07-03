@@ -1,0 +1,11 @@
+{
+  "client_id": "",
+  "client_secret": "",
+  "redirect_uri": "http://127.0.0.1:8080/callback",
+  "port": 8080,
+  "poll_interval": 5,
+  "orientation": "portrait",
+  "bg_color": "white",
+  "scale_image": false,
+  "scale_factor": 1.5
+}

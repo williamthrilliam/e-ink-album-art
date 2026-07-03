@@ -1,0 +1,24 @@
+# Spotify tokens and secrets containing sensitive credentials
+config/tokens.json
+config/secrets.json
+
+# Cache files
+config/last_track.txt
+
+# Local output/test files
+current_album_art.png
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

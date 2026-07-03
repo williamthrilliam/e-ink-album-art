@@ -1,0 +1,16 @@
+[Unit]
+Description=Spotify E-Ink Album Art Display Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=williamthrilliam
+WorkingDirectory=/home/williamthrilliam/spotify-album-art
+ExecStart=/usr/bin/python3 -u src/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
