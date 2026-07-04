@@ -10,15 +10,45 @@ sys.path.append(os.path.join(BASE_DIR, 'lib'))
 
 import epd13in3E
 
+import re
+
+def get_high_res_spotify_art(url):
+    # Matches the base URL, the 4-char size code, and the 24-char image hash
+    pattern = r'(https://i\.scdn\.co/image/ab67616d0000)([a-f0-9]{4})([a-f0-9]{24})'
+    max_res_code = '82c1' # 82c1 is the undocumented identifier for 1400x1400 max-res JPEG
+    
+    match = re.search(pattern, url)
+    if match:
+        base_url = match.group(1)
+        image_hash = match.group(3)
+        return f"{base_url}{max_res_code}{image_hash}"
+    return url
+
 def fetch_image_from_url(url):
+    high_res_url = get_high_res_spotify_art(url)
+    
+    if high_res_url != url:
+        print(f"Attempting to fetch high-res image: {high_res_url}")
+        try:
+            response = requests.get(high_res_url, timeout=10)
+            if response.status_code == 200:
+                print("Successfully fetched high-res image!")
+                return Image.open(BytesIO(response.content))
+            else:
+                print(f"High-res image not available (HTTP {response.status_code}). Falling back to standard resolution.")
+        except Exception as e:
+            print(f"Error fetching high-res image: {e}. Falling back to standard resolution.")
+
+    # Fallback to standard-res URL
     try:
+        print(f"Fetching standard-res image: {url}")
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
             return Image.open(BytesIO(response.content))
         else:
             print(f"Failed to download image: HTTP {response.status_code}")
     except Exception as e:
-        print(f"Error fetching image: {e}")
+        print(f"Error fetching standard image: {e}")
     return None
 
 def draw_album_art(image_url, config):
@@ -29,7 +59,6 @@ def draw_album_art(image_url, config):
         epd.Init()
         
         # Fetch album art image
-        print(f"Fetching album art from URL: {image_url}")
         art_img = fetch_image_from_url(image_url)
         if not art_img:
             print("Could not fetch image, skipping display update.")
@@ -46,20 +75,12 @@ def draw_album_art(image_url, config):
         fill_color = (255, 255, 255) if bg_color == "white" else (0, 0, 0)
         canvas = Image.new("RGB", (width, height), fill_color)
 
-        # Scale image if enabled in config, otherwise use scale_factor if set
-        scale_factor = config.get("scale_factor", 1.0)
-        if config.get("scale_image", False):
-            # Scale to fit display smaller dimension
-            min_dim = min(width, height)
-            art_img = art_img.resize((min_dim, min_dim), Image.Resampling.LANCZOS)
-        elif scale_factor != 1.0:
-            new_width = int(art_img.width * scale_factor)
-            new_height = int(art_img.height * scale_factor)
-            if new_width <= width and new_height <= height:
-                print(f"Scaling image by factor {scale_factor} to {new_width}x{new_height}")
-                art_img = art_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            else:
-                print(f"Warning: Scaled image ({new_width}x{new_height}) exceeds display bounds. Skipping scaling.")
+        # Scale image to target size (default 960x960)
+        scale_factor = config.get("scale_factor", 1.5)
+        target_size = config.get("target_size", int(640 * scale_factor))
+        
+        print(f"Scaling image down from {art_img.width}x{art_img.height} to {target_size}x{target_size}...")
+        art_img = art_img.resize((target_size, target_size), Image.Resampling.LANCZOS)
         
         # Calculate center coordinates
         x_offset = (width - art_img.width) // 2
