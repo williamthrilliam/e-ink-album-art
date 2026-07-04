@@ -19,7 +19,8 @@ The art is centered with customizable margins (no image stretching) and is rende
 
 - **Dynamic Polling:** Automatically updates the screen when a new song starts playing on your active Spotify session.
 - **Bistable & Energy Efficient:** The screen is put to sleep after every render. E-Paper draws zero power to hold an image, meaning your display stays active even if the Raspberry Pi is shut down.
-- **Custom Scaling:** Displays the album art centered on the portrait screen. Includes config options for no scaling (original 640x640) or custom scale multipliers (e.g. 50% size increase to 960x960).
+- **High-Resolution Art Extraction:** Bypasses Spotify's official 640x640 API limit by swapping the CDN resolution code to `82c1` to download the original uncompressed source files (up to 2000x2000+ pixels) directly from Spotify's servers, with automatic fallback to standard resolution.
+- **Crisp Downscaling:** Resizes the high-resolution source art down to exactly `960x960` pixels using high-quality Lanczos resampling, rendering a much sharper image centered on the portrait screen.
 - **Protected Secrets:** Credentials (`secrets.json`) and active OAuth tokens (`tokens.json`) are kept in separate config files ignored by Git to prevent public credential leaks.
 - **Systemd Background Daemon:** Runs continuously in the background, starting automatically when the Pi boots up.
 
