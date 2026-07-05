@@ -7,6 +7,6 @@
   "orientation": "portrait",
   "bg_color": "white",
   "scale_factor": 1.875,
-  "saturation_boost": 1.25,
-  "contrast_boost": 1.15
+  "saturation_boost": 1.0,
+  "contrast_boost": 1.0
 }

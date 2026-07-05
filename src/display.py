@@ -65,9 +65,9 @@ def draw_album_art(image_url, config):
             epd.sleep()
             return False
 
-        # Boost saturation and contrast if specified in config, defaulting to 1.25 and 1.15
-        saturation_factor = config.get("saturation_boost", 1.25)
-        contrast_factor = config.get("contrast_boost", 1.15)
+        # Boost saturation and contrast if specified in config, defaulting to 1.0
+        saturation_factor = config.get("saturation_boost", 1.0)
+        contrast_factor = config.get("contrast_boost", 1.0)
 
         if saturation_factor != 1.0:
             print(f"Boosting color saturation by factor {saturation_factor}")
