@@ -2,7 +2,7 @@ import os
 import sys
 import requests
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 # Base directory setup
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -64,6 +64,20 @@ def draw_album_art(image_url, config):
             print("Could not fetch image, skipping display update.")
             epd.sleep()
             return False
+
+        # Boost saturation and contrast if specified in config, defaulting to 1.25 and 1.15
+        saturation_factor = config.get("saturation_boost", 1.25)
+        contrast_factor = config.get("contrast_boost", 1.15)
+
+        if saturation_factor != 1.0:
+            print(f"Boosting color saturation by factor {saturation_factor}")
+            enhancer = ImageEnhance.Color(art_img)
+            art_img = enhancer.enhance(saturation_factor)
+
+        if contrast_factor != 1.0:
+            print(f"Boosting contrast by factor {contrast_factor}")
+            enhancer = ImageEnhance.Contrast(art_img)
+            art_img = enhancer.enhance(contrast_factor)
 
         # Target dimensions
         width = epd.width

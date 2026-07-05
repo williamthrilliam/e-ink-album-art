@@ -6,6 +6,7 @@
   "poll_interval": 5,
   "orientation": "portrait",
   "bg_color": "white",
-  "scale_image": false,
-  "scale_factor": 1.875
+  "scale_factor": 1.875,
+  "saturation_boost": 1.25,
+  "contrast_boost": 1.15
 }
