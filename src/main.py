@@ -18,7 +18,7 @@ class SpotifyDaemon:
     def __init__(self):
         self.running = True
         self.config = load_config()
-        self.last_track_id = self.load_last_track()
+        self.last_image_url = self.load_last_image_url()
         
         # Register signals for clean shutdown
         signal.signal(signal.SIGINT, self.handle_shutdown)
@@ -28,22 +28,22 @@ class SpotifyDaemon:
         print(f"Received signal {signum}. Shutting down daemon...")
         self.running = False
 
-    def load_last_track(self):
+    def load_last_image_url(self):
         if os.path.exists(LAST_TRACK_PATH):
             try:
                 with open(LAST_TRACK_PATH, 'r') as f:
                     return f.read().strip()
             except Exception as e:
-                print(f"Error loading last track ID: {e}")
+                print(f"Error loading last image URL: {e}")
         return None
 
-    def save_last_track(self, track_id):
+    def save_last_image_url(self, image_url):
         try:
             with open(LAST_TRACK_PATH, 'w') as f:
-                f.write(track_id)
-            self.last_track_id = track_id
+                f.write(image_url)
+            self.last_image_url = image_url
         except Exception as e:
-            print(f"Error saving last track ID: {e}")
+            print(f"Error saving last image URL: {e}")
 
     def fetch_currently_playing(self, access_token):
         headers = {
@@ -94,19 +94,18 @@ class SpotifyDaemon:
                 track_name = item.get("name")
                 artists = ", ".join([artist["name"] for artist in item.get("artists", [])])
                 
-                # Check if it's a new track
-                if track_id != self.last_track_id:
-                    print(f"\nNew track detected: {track_name} - {artists}")
+                # Fetch album art URL (usually index 0 is the highest res 640x640 image)
+                images = item.get("album", {}).get("images", [])
+                if images:
+                    album_art_url = images[0]["url"]
                     
-                    # Fetch album art URL (usually index 0 is the highest res 640x640 image)
-                    images = item.get("album", {}).get("images", [])
-                    if images:
-                        album_art_url = images[0]["url"]
+                    if album_art_url != self.last_image_url:
+                        print(f"\nNew album art detected for track: {track_name} - {artists}")
                         success = draw_album_art(album_art_url, self.config)
                         if success:
-                            self.save_last_track(track_id)
-                    else:
-                        print("No album art images found for this track.")
+                            self.save_last_image_url(album_art_url)
+                else:
+                    print("No album art images found for this track.")
             else:
                 # Idle state, nothing playing or active
                 pass
