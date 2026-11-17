@@ -21,7 +21,7 @@ The art is centered with customizable margins (no image stretching) and is rende
 - **Bistable & Energy Efficient:** The screen is put to sleep after every render. E-Paper draws zero power to hold an image, meaning your display stays active even if the Raspberry Pi is shut down.
 - **High-Resolution Art Extraction:** Bypasses Spotify's official 640x640 API limit by swapping the CDN resolution code to `82c1` to download the original uncompressed source files (up to 2000x2000+ pixels) directly from Spotify's servers, with automatic fallback to standard resolution.
 - **Crisp Downscaling:** Resizes the high-resolution source art to exactly `1200x1200` pixels (scaling factor `1.875`) using high-quality Lanczos resampling, rendering a much sharper image that extends all the way to the side edges of the screen.
-- **Image Enhancements:** Automatically boosts color saturation (default `1.25`) and contrast (default `1.15`) to counteract the natural desaturation of e-paper displays and make color transitions look vibrant and clean.
+- **Optional Image Enhancements:** `saturation_boost` and `contrast_boost` in `config/config.json` can boost color saturation and contrast before conversion. Both default to `1.0` (off).
 - **Protected Secrets:** Credentials (`secrets.json`) and active OAuth tokens (`tokens.json`) are kept in separate config files ignored by Git to prevent public credential leaks.
 - **Systemd Background Daemon:** Runs continuously in the background, starting automatically when the Pi boots up.
 
@@ -33,6 +33,7 @@ The art is centered with customizable margins (no image stretching) and is rende
 e-ink-album-art/
 ├── config/
 │   ├── config.json         # Main settings (orientation, scaling, port)
+│   ├── palette.json        # Ink colors for the optional dithered conversion
 │   └── secrets.json        # Spotify Client ID and Secret (IGNORED BY GIT)
 ├── lib/
 │   ├── epd13in3E.py        # 13.3" Spectra 6 Driver
@@ -40,8 +41,11 @@ e-ink-album-art/
 │   └── DEV_Config_64_b.so  # C configuration helper (Pi 4 64-bit)
 ├── src/
 │   ├── auth.py             # Spotify OAuth2 authentication flow
+│   ├── color_convert.py    # Optional palette-dithered color conversion
 │   ├── display.py          # Image downloading, padding, and e-paper drawing
 │   └── main.py             # Main daemon loop
+├── tools/
+│   └── compare_color.py    # Preview legacy vs dithered conversion without the panel
 ├── LICENSE                 # MIT License
 ├── README.md               # Project documentation
 ├── requirements.txt        # Python dependencies
@@ -97,8 +101,8 @@ Customize your display settings in `config/config.json`:
   "bg_color": "white",
   "scale_image": false,
   "scale_factor": 1.875,
-  "saturation_boost": 1.25,
-  "contrast_boost": 1.15
+  "saturation_boost": 1.0,
+  "contrast_boost": 1.0
 }
 ```
 
@@ -108,6 +112,49 @@ Run the authentication script manually to authorize your Spotify account:
 python3 src/auth.py
 ```
 This starts a local callback server. Follow the authorization link printed in the terminal, click **Agree**, and copy the redirected URL (even if the page fails to load). Paste the URL back into the terminal prompt to complete token generation. The credentials will be saved in `config/tokens.json`.
+
+### 6. (Optional) Palette-dithered color conversion
+
+By default the driver snaps every pixel to the six *ideal* primaries (pure `#00ff00` green, `#0000ff` blue, ...). Real Spectra 6 inks are much duller. Setting `"color_mode": "dither"` in `config/config.json` instead error-diffuses against `config/palette.json`, which describes how the inks actually look, using [epaper-dithering](https://github.com/OpenDisplay-org/epaper-dithering) (MIT).
+
+**Install** (Python 3.11+). Raspberry Pi OS blocks system-wide `pip install`, so use a virtual environment that can still see the apt packages from step 2. Run this in the project directory:
+
+```bash
+python3 -m venv --system-site-packages venv
+venv/bin/pip install -r requirements.txt
+```
+
+**Run the service with the venv.** After installing the service (below), add a systemd drop-in so the unit file itself stays unchanged:
+
+```bash
+sudo mkdir -p /etc/systemd/system/spotify-album-art.service.d
+printf '[Service]\nExecStart=\nExecStart=%s/venv/bin/python -u src/main.py\n' "$PWD" \
+  | sudo tee /etc/systemd/system/spotify-album-art.service.d/venv.conf
+sudo systemctl daemon-reload
+sudo systemctl restart spotify-album-art.service
+```
+
+**Enable it** in `config/config.json`:
+
+```json
+{
+  "color_mode": "dither",
+  "dither": { "mode": "floyd_steinberg" }
+}
+```
+
+`dither` accepts any `DitherOptions` field (`mode`, `tone`, `gamut`, `saturation`, `exposure`, `shadows`, `highlights`, `anchor`, `snap`, ...). If the library is missing or the palette is invalid, the daemon logs the error and falls back to the driver's conversion. Leaving `color_mode` unset keeps the original behavior.
+
+**Palette:** `config/palette.json` is the 7.3" Spectra 6 example palette from [epaper-dithering](https://github.com/OpenDisplay-org/epaper-dithering) (MIT, Copyright (c) 2026 OpenDisplay.org), measured on a different panel than the 13.3" one, so treat it as a starting point. For best results measure your own panel (see that project's `docs/CALIBRATION.md`) and replace the file; `palette_path` points elsewhere if you prefer.
+
+**Preview without touching the panel** (needs `pip install -r requirements.txt` wherever you run it):
+
+```bash
+python3 tools/compare_color.py cover.png -o compare.png \
+  --variant "fs=floyd_steinberg" --variant "tone=floyd_steinberg,tone=0.5"
+```
+
+This draws the source, the legacy conversion and each variant using the palette's ink colors. It is only as accurate as the palette.
 
 ---
 

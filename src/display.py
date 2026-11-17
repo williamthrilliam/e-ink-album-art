@@ -7,6 +7,7 @@ from PIL import Image, ImageEnhance
 # Base directory setup
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(BASE_DIR, 'lib'))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import epd13in3E
 
@@ -104,9 +105,22 @@ def draw_album_art(image_url, config):
         print(f"Pasting album art of size {art_img.width}x{art_img.height} at ({x_offset}, {y_offset})")
         canvas.paste(art_img, (x_offset, y_offset))
 
+        # Convert to the panel's six inks. "legacy" (default) uses the driver's nearest-ink
+        # quantize; "dither" error-diffuses against the measured palette (src/color_convert.py).
+        buffer = None
+        if config.get("color_mode", "legacy") == "dither":
+            try:
+                import color_convert
+                print("Converting colors with palette dithering...")
+                buffer = color_convert.canvas_to_buffer(canvas, config, (epd.width, epd.height))
+            except Exception as e:
+                print(f"Palette dithering failed ({e}). Falling back to the driver's conversion.")
+        if buffer is None:
+            buffer = epd.getbuffer(canvas)
+
         # Render on display
         print("Rendering image to display...")
-        epd.display(epd.getbuffer(canvas))
+        epd.display(buffer)
         print("Rendering finished. Putting display to sleep.")
         epd.sleep()
         return True
